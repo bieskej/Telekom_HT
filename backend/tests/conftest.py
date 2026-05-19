@@ -88,6 +88,56 @@ def _migrate_notifikacije_status():
         db.execute(text("ALTER TABLE msisdn ADD COLUMN IF NOT EXISTS karantena_razlog VARCHAR(255)"))
         db.execute(
             text(
+                "ALTER TABLE msisdn ADD COLUMN IF NOT EXISTS u_kvaru BOOLEAN NOT NULL DEFAULT false"
+            )
+        )
+        db.execute(text("ALTER TABLE msisdn DROP CONSTRAINT IF EXISTS msisdn_status_check"))
+        db.execute(
+            text(
+                """
+                ALTER TABLE msisdn ADD CONSTRAINT msisdn_status_check
+                CHECK (status IN ('slobodan', 'zauzet', 'karantena', 'portano'))
+                """
+            )
+        )
+        db.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS portabilnost (
+                    id SERIAL PRIMARY KEY,
+                    msisdn_id INTEGER REFERENCES msisdn(id),
+                    broj VARCHAR(15),
+                    tip VARCHAR(20) NOT NULL,
+                    izvor_op VARCHAR(100) NOT NULL,
+                    ciljni_op VARCHAR(100) NOT NULL,
+                    datum_zahtjeva TIMESTAMPTZ DEFAULT now(),
+                    datum_realizacije TIMESTAMPTZ,
+                    status VARCHAR(30) NOT NULL DEFAULT 'zahtjev',
+                    napomena TEXT,
+                    created_by INTEGER REFERENCES radnici(id)
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS servisni_nalog (
+                    id SERIAL PRIMARY KEY,
+                    uredjaj_id INTEGER NOT NULL REFERENCES uredjaji(id),
+                    opis TEXT NOT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT 'otvoren',
+                    prioritet VARCHAR(20) NOT NULL DEFAULT 'srednji',
+                    prijavio_id INTEGER REFERENCES radnici(id),
+                    rijesio_id INTEGER REFERENCES radnici(id),
+                    created_at TIMESTAMPTZ DEFAULT now(),
+                    rijeseno_at TIMESTAMPTZ
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
                 """
                 CREATE TABLE IF NOT EXISTS email_log (
                     id SERIAL PRIMARY KEY,

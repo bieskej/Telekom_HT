@@ -80,6 +80,32 @@ export interface OpcineGeoJson {
   features: OpcinaGeoFeature[]
 }
 
+export interface PortabilnostItem {
+  id: number
+  msisdn_id?: number | null
+  broj?: string | null
+  tip: string
+  izvor_op: string
+  ciljni_op: string
+  datum_zahtjeva?: string | null
+  datum_realizacije?: string | null
+  status: string
+  napomena?: string | null
+  created_by?: number | null
+}
+
+export interface ServisniNalogItem {
+  id: number
+  uredjaj_id: number
+  opis: string
+  status: 'otvoren' | 'u_obradi' | 'rijesen'
+  prioritet: string
+  prijavio_id?: number | null
+  rijesio_id?: number | null
+  created_at?: string | null
+  rijeseno_at?: string | null
+}
+
 export interface WildcardMsisdnItem {
   id: number
   broj: string

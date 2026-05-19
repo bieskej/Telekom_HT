@@ -166,6 +166,48 @@ export const api = {
 
   preuzmiUgovor: (msisdnId: number) => downloadPdf(`/msisdn/${msisdnId}/ugovor`, `ugovor_${msisdnId}.pdf`),
 
+  portabilnostLista: (tip?: string) =>
+    request<import('@/types/api').PortabilnostItem[]>(
+      `/portabilnost${tip ? `?tip=${encodeURIComponent(tip)}` : ''}`,
+    ),
+
+  portabilnostKreiraj: (body: {
+    tip: string
+    izvor_op: string
+    ciljni_op: string
+    msisdn_id?: number
+    broj?: string
+    napomena?: string
+  }) =>
+    request<import('@/types/api').PortabilnostItem>('/portabilnost', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  portabilnostAzuriraj: (id: number, body: { status?: string; napomena?: string }) =>
+    request<import('@/types/api').PortabilnostItem>(`/portabilnost/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  servisniNaloziLista: () =>
+    request<import('@/types/api').ServisniNalogItem[]>('/servisni-nalozi'),
+
+  servisniNalogKreiraj: (body: { uredjaj_id: number; opis: string; prioritet?: string }) =>
+    request<import('@/types/api').ServisniNalogItem>('/servisni-nalozi', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  servisniNalogAzuriraj: (
+    id: number,
+    body: { status?: string; prioritet?: string; opis?: string },
+  ) =>
+    request<import('@/types/api').ServisniNalogItem>(`/servisni-nalozi/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
   wildcardPretraga: (params: {
     uzorak: string
     opcina_naziv?: string

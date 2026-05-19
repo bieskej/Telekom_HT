@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 SLOBODAN_UVJET = """
     m.status = 'slobodan'
     AND (m.rezerviran_do IS NULL OR m.rezerviran_do < NOW())
+    AND COALESCE(m.u_kvaru, false) = false
 """
 
 OPCINA_JOIN = """

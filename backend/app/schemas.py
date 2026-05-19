@@ -171,6 +171,58 @@ class MsisdnOslobodiKarantenaResponse(BaseModel):
     status: str
 
 
+class PortabilnostCreate(BaseModel):
+    tip: str
+    izvor_op: str
+    ciljni_op: str
+    msisdn_id: int | None = None
+    broj: str | None = None
+    napomena: str | None = None
+
+
+class PortabilnostPatch(BaseModel):
+    status: str | None = None
+    napomena: str | None = None
+
+
+class PortabilnostItem(BaseModel):
+    id: int
+    msisdn_id: int | None = None
+    broj: str | None = None
+    tip: str
+    izvor_op: str
+    ciljni_op: str
+    datum_zahtjeva: datetime | None = None
+    datum_realizacije: datetime | None = None
+    status: str
+    napomena: str | None = None
+    created_by: int | None = None
+
+
+class ServisniNalogCreate(BaseModel):
+    uredjaj_id: int
+    opis: str
+    prioritet: str = "srednji"
+
+
+class ServisniNalogPatch(BaseModel):
+    status: str | None = None
+    prioritet: str | None = None
+    opis: str | None = None
+
+
+class ServisniNalogItem(BaseModel):
+    id: int
+    uredjaj_id: int
+    opis: str
+    status: str
+    prioritet: str
+    prijavio_id: int | None = None
+    rijesio_id: int | None = None
+    created_at: datetime | None = None
+    rijeseno_at: datetime | None = None
+
+
 class WildcardMsisdnItem(BaseModel):
     id: int
     broj: str

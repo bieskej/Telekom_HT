@@ -81,6 +81,7 @@ class Msisdn(Base):
     datum_karantene = Column(DateTime(timezone=True))
     karantena_dana = Column(Integer, nullable=False, default=60)
     karantena_razlog = Column(String(255), nullable=True)
+    u_kvaru = Column(Boolean, nullable=False, default=False)
     datum_dodjele = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -157,3 +158,33 @@ class MsisdnHistory(Base):
     akcija = Column(String(50))
     napomena = Column(Text)
     promijenjeno_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Portabilnost(Base):
+    __tablename__ = "portabilnost"
+
+    id = Column(Integer, primary_key=True)
+    msisdn_id = Column(Integer, ForeignKey("msisdn.id"), nullable=True)
+    broj = Column(String(15), nullable=True)
+    tip = Column(String(20), nullable=False)
+    izvor_op = Column(String(100), nullable=False)
+    ciljni_op = Column(String(100), nullable=False)
+    datum_zahtjeva = Column(DateTime(timezone=True), server_default=func.now())
+    datum_realizacije = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(30), nullable=False, default="zahtjev")
+    napomena = Column(Text, nullable=True)
+    created_by = Column(Integer, ForeignKey("radnici.id"), nullable=True)
+
+
+class ServisniNalog(Base):
+    __tablename__ = "servisni_nalog"
+
+    id = Column(Integer, primary_key=True)
+    uredjaj_id = Column(Integer, ForeignKey("uredjaji.id"), nullable=False)
+    opis = Column(Text, nullable=False)
+    status = Column(String(30), nullable=False, default="otvoren")
+    prioritet = Column(String(20), nullable=False, default="srednji")
+    prijavio_id = Column(Integer, ForeignKey("radnici.id"), nullable=True)
+    rijesio_id = Column(Integer, ForeignKey("radnici.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    rijeseno_at = Column(DateTime(timezone=True), nullable=True)
