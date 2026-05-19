@@ -21,6 +21,7 @@ from app.schemas import (
     RezervirajResponse,
     RezervirajSljedeciRequest,
     StatistikeResponse,
+    WildcardPretragaResponse,
 )
 from app.services import msisdn_service
 from app.services.dokumenti_service import osiguraj_dokumente
@@ -65,6 +66,19 @@ async def oslobodi(
     karantena_dana = payload.karantena_dana if payload else None
     result = msisdn_service.oslobodi_broj(db, msisdn_id, karantena_dana)
     return OslobodiResponse(**result)
+
+
+@router.get("/msisdn/wildcard", response_model=WildcardPretragaResponse)
+async def wildcard_pretraga(
+    _radnik: RequirePregled,
+    uzorak: str = Query(..., min_length=1),
+    opcina_naziv: str | None = None,
+    kvaliteta_id: int | None = None,
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    result = msisdn_service.pretrazi_wildcard(db, uzorak, opcina_naziv, kvaliteta_id, limit)
+    return WildcardPretragaResponse(**result)
 
 
 @router.get("/msisdn/{msisdn_id}", response_model=MsisdnDetaljResponse)

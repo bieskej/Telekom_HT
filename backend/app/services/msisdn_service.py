@@ -743,6 +743,65 @@ def dodijeli_bulk(
     }
 
 
+def _uzorak_u_like(uzorak: str) -> str:
+    """Pretvara * u % i ? u _ za SQL LIKE."""
+    escaped = uzorak.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return escaped.replace("*", "%").replace("?", "_")
+
+
+def pretrazi_wildcard(
+    db: Session,
+    uzorak: str,
+    opcina_naziv: str | None,
+    kvaliteta_id: int | None,
+    limit: int,
+) -> dict:
+    if not uzorak or not uzorak.strip():
+        raise HTTPException(status_code=400, detail="Uzorak je obavezan.")
+    like_pat = _uzorak_u_like(uzorak.strip())
+    if like_pat.replace("%", "").replace("_", "") == "":
+        raise HTTPException(status_code=400, detail="Uzorak je preširok.")
+
+    conditions = [SLOBODAN_UVJET.replace("m.", "m."), "m.broj LIKE :like_pat"]
+    params: dict = {"like_pat": like_pat, "limit": min(limit, 100)}
+
+    if opcina_naziv and opcina_naziv.strip():
+        conditions.append("o.naziv ILIKE :opcina_naziv")
+        params["opcina_naziv"] = f"%{opcina_naziv.strip()}%"
+    if kvaliteta_id is not None:
+        conditions.append("m.kvaliteta_id = :kvaliteta_id")
+        params["kvaliteta_id"] = kvaliteta_id
+
+    where = " AND ".join(conditions)
+    rows = db.execute(
+        text(
+            f"""
+            SELECT m.id, m.broj, k.naziv AS kvaliteta, k.cijena, o.naziv AS opcina_naziv
+            FROM msisdn m
+            {OPCINA_JOIN}
+            JOIN kvaliteta k ON k.id = m.kvaliteta_id
+            WHERE {where}
+            ORDER BY k.cijena DESC, m.broj
+            LIMIT :limit
+            """
+        ),
+        params,
+    ).fetchall()
+
+    rezultati = [
+        {
+            "id": r.id,
+            "broj": r.broj,
+            "broj_formatiran": formatiraj_broj(r.broj),
+            "kvaliteta": r.kvaliteta,
+            "cijena": float(r.cijena),
+            "opcina_naziv": r.opcina_naziv,
+        }
+        for r in rows
+    ]
+    return {"uzorak": uzorak, "ukupno": len(rezultati), "rezultati": rezultati}
+
+
 def pretrazi_msisdn(
     db: Session,
     broj: str | None,

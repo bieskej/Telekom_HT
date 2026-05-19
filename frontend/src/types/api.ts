@@ -80,6 +80,21 @@ export interface OpcineGeoJson {
   features: OpcinaGeoFeature[]
 }
 
+export interface WildcardMsisdnItem {
+  id: number
+  broj: string
+  broj_formatiran: string
+  kvaliteta: string
+  cijena: number
+  opcina_naziv?: string | null
+}
+
+export interface WildcardPretragaResponse {
+  uzorak: string
+  ukupno: number
+  rezultati: WildcardMsisdnItem[]
+}
+
 export interface KarantenaPatchResponse {
   msisdn_id: number
   karantena_dana: number

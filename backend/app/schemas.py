@@ -171,6 +171,21 @@ class MsisdnOslobodiKarantenaResponse(BaseModel):
     status: str
 
 
+class WildcardMsisdnItem(BaseModel):
+    id: int
+    broj: str
+    broj_formatiran: str
+    kvaliteta: str
+    cijena: float
+    opcina_naziv: str | None = None
+
+
+class WildcardPretragaResponse(BaseModel):
+    uzorak: str
+    ukupno: int
+    rezultati: list[WildcardMsisdnItem] = Field(default_factory=list)
+
+
 class MsisdnDetaljResponse(BaseModel):
     id: int
     broj: str

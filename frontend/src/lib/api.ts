@@ -166,6 +166,19 @@ export const api = {
 
   preuzmiUgovor: (msisdnId: number) => downloadPdf(`/msisdn/${msisdnId}/ugovor`, `ugovor_${msisdnId}.pdf`),
 
+  wildcardPretraga: (params: {
+    uzorak: string
+    opcina_naziv?: string
+    kvaliteta_id?: number
+    limit?: number
+  }) => {
+    const q = new URLSearchParams({ uzorak: params.uzorak })
+    if (params.opcina_naziv) q.set('opcina_naziv', params.opcina_naziv)
+    if (params.kvaliteta_id != null) q.set('kvaliteta_id', String(params.kvaliteta_id))
+    if (params.limit != null) q.set('limit', String(params.limit))
+    return request<import('@/types/api').WildcardPretragaResponse>(`/msisdn/wildcard?${q}`)
+  },
+
   msisdnDetalj: (msisdnId: number) =>
     request<import('@/types/api').MsisdnDetalj>(`/msisdn/${msisdnId}`),
 

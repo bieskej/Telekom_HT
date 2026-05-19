@@ -13,6 +13,7 @@ import type { KorisnikItem, MsisdnItem, Opcina } from '@/types/api'
 import { KorisnikDetaljiPanel } from '@/components/korisnici/KorisnikDetaljiPanel'
 import { BrojeviTable } from '@/components/brojevi/BrojeviTable'
 import { MsisdnDetaljModal } from '@/components/brojevi/MsisdnDetaljModal'
+import { MagicBrojPretraga } from '@/components/brojevi/MagicBrojPretraga'
 import { BulkDodjelaModal } from '@/components/dodjela/BulkDodjelaModal'
 import { OslobodiModal } from '@/components/oslobadanje/OslobodiModal'
 import { Button } from '@/components/ui/Button'
@@ -181,6 +182,8 @@ export function BrojeviPage() {
 
   return (
     <span className="block space-y-6">
+      {mozeDodjela && <MagicBrojPretraga />}
+
       {odabraniKorisnik && (
         <KorisnikDetaljiPanel
           korisnik={odabraniKorisnik}
