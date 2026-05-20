@@ -171,6 +171,37 @@ class MsisdnOslobodiKarantenaResponse(BaseModel):
     status: str
 
 
+class DodjeleHeatmapCelija(BaseModel):
+    dow: int
+    hour: int
+    broj: int
+
+
+class DodjeleHeatmapResponse(BaseModel):
+    dana: int
+    celije: list[DodjeleHeatmapCelija] = Field(default_factory=list)
+
+
+class AuditLogItem(BaseModel):
+    id: int
+    radnik_id: int | None = None
+    radnik_email: str | None = None
+    akcija: str
+    entitet: str
+    entitet_id: int | None = None
+    detalji_json: str | None = None
+    ip: str | None = None
+    user_agent: str | None = None
+    created_at: datetime | None = None
+
+
+class AuditLogListResponse(BaseModel):
+    ukupno: int
+    limit: int
+    offset: int
+    stavke: list[AuditLogItem] = Field(default_factory=list)
+
+
 class PortabilnostCreate(BaseModel):
     tip: str
     izvor_op: str

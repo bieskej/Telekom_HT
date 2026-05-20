@@ -94,6 +94,15 @@ def azuriraj_portabilnost(db: Session, port_id: int, data: dict) -> dict:
         if novi == "realiziran":
             p.datum_realizacije = datetime.now(timezone.utc)
             _realiziraj(db, p)
+            from app.services.audit_service import zapis_audit
+
+            zapis_audit(
+                db,
+                akcija=f"port_{p.tip}_realizacija",
+                entitet="portabilnost",
+                entitet_id=p.id,
+                detalji={"msisdn_id": p.msisdn_id, "broj": p.broj},
+            )
     if "napomena" in data:
         p.napomena = data["napomena"]
     db.commit()

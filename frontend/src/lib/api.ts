@@ -166,6 +166,53 @@ export const api = {
 
   preuzmiUgovor: (msisdnId: number) => downloadPdf(`/msisdn/${msisdnId}/ugovor`, `ugovor_${msisdnId}.pdf`),
 
+  dodjeleHeatmap: (dana = 90) =>
+    request<import('@/types/api').DodjeleHeatmapResponse>(
+      `/admin/statistika/dodjele-heatmap?dana=${dana}`,
+    ),
+
+  auditLogList: (params?: {
+    radnik_id?: number
+    entitet?: string
+    od?: string
+    do?: string
+    q?: string
+    limit?: number
+    offset?: number
+  }) => {
+    const q = new URLSearchParams()
+    if (params?.radnik_id != null) q.set('radnik_id', String(params.radnik_id))
+    if (params?.entitet) q.set('entitet', params.entitet)
+    if (params?.od) q.set('od', params.od)
+    if (params?.do) q.set('do', params.do)
+    if (params?.q) q.set('q', params.q)
+    if (params?.limit != null) q.set('limit', String(params.limit))
+    if (params?.offset != null) q.set('offset', String(params.offset))
+    const qs = q.toString()
+    return request<import('@/types/api').AuditLogListResponse>(
+      `/admin/audit-log${qs ? `?${qs}` : ''}`,
+    )
+  },
+
+  auditLogExportCsv: async (params?: {
+    entitet?: string
+    od?: string
+    do?: string
+    q?: string
+  }) => {
+    const q = new URLSearchParams()
+    if (params?.entitet) q.set('entitet', params.entitet)
+    if (params?.od) q.set('od', params.od)
+    if (params?.do) q.set('do', params.do)
+    if (params?.q) q.set('q', params.q)
+    const token = authStorage.getToken()
+    const res = await fetch(`${BASE}/admin/audit-log/export.csv?${q}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) throw new Error('Export nije uspio')
+    return res.blob()
+  },
+
   portabilnostLista: (tip?: string) =>
     request<import('@/types/api').PortabilnostItem[]>(
       `/portabilnost${tip ? `?tip=${encodeURIComponent(tip)}` : ''}`,

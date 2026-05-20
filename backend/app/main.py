@@ -14,6 +14,8 @@ from app.routers.radnici import router as radnici_router
 from app.routers.izvoz import router as izvoz_router
 from app.routers.admin import router as admin_router
 from app.routers.admin_email import router as admin_email_router
+from app.routers.admin_audit import router as admin_audit_router
+from app.routers.admin_statistika import router as admin_statistika_router
 from app.routers.email_test import router as email_test_router
 from app.routers.catalog import router as catalog_router
 from app.routers.hijerarhija import router as hijerarhija_router
@@ -89,6 +91,8 @@ app.include_router(kvalitete_router)
 app.include_router(izvoz_router)
 app.include_router(admin_router)
 app.include_router(admin_email_router)
+app.include_router(admin_audit_router)
+app.include_router(admin_statistika_router)
 app.include_router(email_test_router)
 app.include_router(catalog_router)
 app.include_router(hijerarhija_router)

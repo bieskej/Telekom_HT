@@ -15,6 +15,7 @@ import { ImportPage } from '@/pages/ImportPage'
 import { EmailLogPage } from '@/pages/EmailLogPage'
 import { PortabilnostPage } from '@/pages/PortabilnostPage'
 import { ServisniNaloziPage } from '@/pages/ServisniNaloziPage'
+import { AuditLogPage } from '@/pages/AuditLogPage'
 import { KorisniciPage } from '@/pages/KorisniciPage'
 import { RadniciPage } from '@/pages/RadniciPage'
 import { StatistikaPage } from '@/pages/StatistikaPage'
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="radnici" element={<RadniciPage />} />
               <Route path="admin/import" element={<ImportPage />} />
               <Route path="admin/email-log" element={<EmailLogPage />} />
+              <Route path="admin/audit-log" element={<AuditLogPage />} />
               <Route path="portabilnost" element={<PortabilnostPage />} />
               <Route path="servisni-nalozi" element={<ServisniNaloziPage />} />
             </Route>

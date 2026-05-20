@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -35,6 +35,7 @@ async def dodijeli_broj(
     payload: DodijeliBrojRequest,
     background_tasks: BackgroundTasks,
     radnik: RequireProdajaIliAdmin,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     result = msisdn_service.dodijeli_broj(
@@ -53,6 +54,18 @@ async def dodijeli_broj(
         radnik.uloga,
         placanje=payload.placanje.model_dump(),
     )
+    from app.services.audit_service import zapis_audit
+
+    zapis_audit(
+        db,
+        akcija="dodjela",
+        entitet="msisdn",
+        entitet_id=result["msisdn_id"],
+        radnik_id=radnik.id,
+        detalji={"broj": result["broj_formatiran"], "kvaliteta": result["kvaliteta"]},
+        request=request,
+    )
+    db.commit()
     return DodijeliBrojResponse(**result)
 
 
@@ -81,15 +94,6 @@ async def wildcard_pretraga(
     return WildcardPretragaResponse(**result)
 
 
-@router.get("/msisdn/{msisdn_id}", response_model=MsisdnDetaljResponse)
-async def msisdn_detalj(
-    msisdn_id: int,
-    _radnik: RequirePregled,
-    db: Session = Depends(get_db),
-):
-    return MsisdnDetaljResponse(**msisdn_service.dohvati_msisdn_detalj(db, msisdn_id))
-
-
 @router.patch("/msisdn/{msisdn_id}/karantena", response_model=KarantenaPatchResponse)
 async def patch_karantena(
     msisdn_id: int,
@@ -112,11 +116,24 @@ async def patch_karantena(
 async def oslobodi_iz_karantene(
     msisdn_id: int,
     admin: RequireAdmin,
+    request: Request,
     payload: MsisdnOslobodiKarantenaRequest | None = None,
     db: Session = Depends(get_db),
 ):
     razlog = payload.razlog if payload else None
     result = msisdn_service.oslobodi_iz_karantene_admin(db, msisdn_id, razlog, admin.id)
+    from app.services.audit_service import zapis_audit
+
+    zapis_audit(
+        db,
+        akcija="oslobodeno_iz_karantene",
+        entitet="msisdn",
+        entitet_id=msisdn_id,
+        radnik_id=admin.id,
+        detalji={"razlog": razlog},
+        request=request,
+    )
+    db.commit()
     return MsisdnOslobodiKarantenaResponse(**result)
 
 
@@ -151,6 +168,15 @@ async def pretraga_msisdn(
         per_page,
     )
     return MsisdnPretragaResponse(**result)
+
+
+@router.get("/msisdn/{msisdn_id}", response_model=MsisdnDetaljResponse)
+async def msisdn_detalj(
+    msisdn_id: int,
+    _radnik: RequirePregled,
+    db: Session = Depends(get_db),
+):
+    return MsisdnDetaljResponse(**msisdn_service.dohvati_msisdn_detalj(db, msisdn_id))
 
 
 @router.post("/rezerviraj-sljedeci", response_model=RezervirajResponse)

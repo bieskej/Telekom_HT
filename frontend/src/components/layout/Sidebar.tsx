@@ -1,4 +1,4 @@
-﻿import { BarChart3, GitBranch, Hash, LayoutDashboard, Mail, Menu, PhoneCall, Radio, Upload, UserCircle, Users, Wrench, X } from 'lucide-react'
+﻿import { BarChart3, GitBranch, Hash, LayoutDashboard, Mail, Menu, PhoneCall, Radio, ScrollText, Upload, UserCircle, Users, Wrench, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ const baseNav = [
   { to: '/radnici', label: 'Radnici', icon: Users, uloge: ['admin'] as const },
   { to: '/admin/import', label: 'Import RAK', icon: Upload, uloge: ['admin'] as const },
   { to: '/admin/email-log', label: 'Email log', icon: Mail, uloge: ['admin'] as const },
+  { to: '/admin/audit-log', label: 'Audit log', icon: ScrollText, uloge: ['admin'] as const },
 ]
 
 interface SidebarProps {
@@ -39,7 +40,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       />
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-xl transition-transform duration-300 ease-out lg:static lg:translate-x-0 lg:shadow-none',
+          'fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-xl transition-transform duration-300 ease-out dark:bg-slate-900 lg:static lg:translate-x-0 lg:shadow-none no-print',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >

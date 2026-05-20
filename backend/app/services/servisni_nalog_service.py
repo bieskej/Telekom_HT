@@ -71,6 +71,16 @@ def kreiraj_nalog(db: Session, data: dict, radnik_id: int) -> dict:
     db.flush()
     if n.status == "otvoren" and n.prioritet == "kritican":
         _osvjezi_u_kvaru_uredjaja(db, n.uredjaj_id)
+    from app.services.audit_service import zapis_audit
+
+    zapis_audit(
+        db,
+        akcija="servisni_nalog_otvoren",
+        entitet="servisni_nalog",
+        entitet_id=n.id,
+        radnik_id=radnik_id,
+        detalji={"uredjaj_id": n.uredjaj_id, "prioritet": n.prioritet},
+    )
     db.commit()
     db.refresh(n)
     return _row_dict(n)
@@ -105,6 +115,16 @@ def azuriraj_nalog(db: Session, nalog_id: int, data: dict, radnik_id: int) -> di
         if novi == "rijesen":
             n.rijeseno_at = datetime.now(timezone.utc)
             n.rijesio_id = radnik_id
+            from app.services.audit_service import zapis_audit
+
+            zapis_audit(
+                db,
+                akcija="servisni_nalog_zatvoren",
+                entitet="servisni_nalog",
+                entitet_id=n.id,
+                radnik_id=radnik_id,
+                detalji={"uredjaj_id": n.uredjaj_id},
+            )
     if "prioritet" in data and data["prioritet"]:
         if data["prioritet"] not in VALID_PRIORITET:
             raise HTTPException(status_code=400, detail="Neispravan prioritet.")

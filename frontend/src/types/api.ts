@@ -80,6 +80,37 @@ export interface OpcineGeoJson {
   features: OpcinaGeoFeature[]
 }
 
+export interface DodjeleHeatmapCelija {
+  dow: number
+  hour: number
+  broj: number
+}
+
+export interface DodjeleHeatmapResponse {
+  dana: number
+  celije: DodjeleHeatmapCelija[]
+}
+
+export interface AuditLogItem {
+  id: number
+  radnik_id?: number | null
+  radnik_email?: string | null
+  akcija: string
+  entitet: string
+  entitet_id?: number | null
+  detalji_json?: string | null
+  ip?: string | null
+  user_agent?: string | null
+  created_at?: string | null
+}
+
+export interface AuditLogListResponse {
+  ukupno: number
+  limit: number
+  offset: number
+  stavke: AuditLogItem[]
+}
+
 export interface PortabilnostItem {
   id: number
   msisdn_id?: number | null
