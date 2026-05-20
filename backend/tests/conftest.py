@@ -1,3 +1,4 @@
+import os
 import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
@@ -6,6 +7,17 @@ from sqlalchemy import text
 from app.database import SessionLocal
 from app.main import app
 from app.services.jmbg import validiraj_jmbg
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _pytest_backend_cwd():
+    """PDF font health očekuje CWD = backend root."""
+    old = os.getcwd()
+    os.chdir(BACKEND_ROOT)
+    yield
+    os.chdir(old)
 
 
 def generiraj_validan_jmbg(dan: str = "01", mjesec: str = "01", godina: str = "000", regija: str = "50", serijski: str = "001") -> str:
@@ -122,6 +134,23 @@ def _migrate_notifikacije_status():
         db.execute(
             text(
                 """
+                CREATE TABLE IF NOT EXISTS audit_log (
+                    id SERIAL PRIMARY KEY,
+                    radnik_id INTEGER REFERENCES radnici(id),
+                    akcija VARCHAR(80) NOT NULL,
+                    entitet VARCHAR(50) NOT NULL,
+                    entitet_id INTEGER,
+                    detalji_json TEXT,
+                    ip VARCHAR(45),
+                    user_agent VARCHAR(500),
+                    created_at TIMESTAMPTZ DEFAULT now()
+                )
+                """
+            )
+        )
+        db.execute(
+            text(
+                """
                 CREATE TABLE IF NOT EXISTS servisni_nalog (
                     id SERIAL PRIMARY KEY,
                     uredjaj_id INTEGER NOT NULL REFERENCES uredjaji(id),
@@ -166,6 +195,22 @@ def db():
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture(autouse=True)
+def _reset_u_kvaru_blokada(db):
+    """Kritični servisni nalozi iz drugih testova ne smiju blokirati cijeli inventar."""
+    db.execute(
+        text(
+            """
+            UPDATE servisni_nalog SET status = 'rijesen', rijeseno_at = NOW()
+            WHERE prioritet = 'kritican' AND status IN ('otvoren', 'u_obradi')
+            """
+        )
+    )
+    db.execute(text("UPDATE msisdn SET u_kvaru = false WHERE u_kvaru = true"))
+    db.commit()
+    yield
 
 
 @pytest.fixture

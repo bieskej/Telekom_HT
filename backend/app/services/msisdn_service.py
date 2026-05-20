@@ -953,7 +953,7 @@ def statistike(db: Session) -> dict:
             SELECT
               COUNT(*) AS ukupno,
               COUNT(*) FILTER (WHERE status = 'slobodan') AS slobodni,
-              COUNT(*) FILTER (WHERE status = 'zauzet') AS zauzeti,
+              COUNT(*) FILTER (WHERE status IN ('zauzet', 'portano')) AS zauzeti,
               COUNT(*) FILTER (WHERE status = 'karantena') AS karantena
             FROM msisdn
             """
@@ -976,7 +976,7 @@ def statistike(db: Session) -> dict:
                      WHERE m.status = 'slobodan'
                        AND (m.rezerviran_do IS NULL OR m.rezerviran_do < NOW())
                    ) AS slobodni,
-                   COUNT(m.id) FILTER (WHERE m.status IN ('zauzet', 'karantena')) AS zauzeto_karantena
+                   COUNT(m.id) FILTER (WHERE m.status IN ('zauzet', 'karantena', 'portano')) AS zauzeto_karantena
             FROM msisdn m
             {OPCINA_JOIN}
             GROUP BY o.naziv
@@ -1007,11 +1007,8 @@ def statistike(db: Session) -> dict:
             SELECT z.oznaka,
                    z.sjediste,
                    COUNT(m.id) AS ukupno,
-                   COUNT(m.id) FILTER (
-                     WHERE m.status = 'slobodan'
-                       AND (m.rezerviran_do IS NULL OR m.rezerviran_do < NOW())
-                   ) AS slobodni,
-                   COUNT(m.id) FILTER (WHERE m.status = 'zauzet') AS zauzeti,
+                   COUNT(m.id) FILTER (WHERE m.status = 'slobodan') AS slobodni,
+                   COUNT(m.id) FILTER (WHERE m.status IN ('zauzet', 'portano')) AS zauzeti,
                    COUNT(m.id) FILTER (WHERE m.status = 'karantena') AS karantena
             FROM msisdn m
             {OPCINA_JOIN}

@@ -14,6 +14,7 @@ import { KorisnikDetaljiPanel } from '@/components/korisnici/KorisnikDetaljiPane
 import { BrojeviTable } from '@/components/brojevi/BrojeviTable'
 import { MsisdnDetaljModal } from '@/components/brojevi/MsisdnDetaljModal'
 import { MagicBrojPretraga } from '@/components/brojevi/MagicBrojPretraga'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { BulkDodjelaModal } from '@/components/dodjela/BulkDodjelaModal'
 import { OslobodiModal } from '@/components/oslobadanje/OslobodiModal'
 import { Button } from '@/components/ui/Button'
@@ -295,7 +296,11 @@ export function BrojeviPage() {
       </Card>
 
       {loading ? (
-        <p className="py-12 text-center text-slate-500">Učitavanje brojeva...</p>
+        <span className="block space-y-3 py-8">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </span>
       ) : items.length === 0 ? (
         <Card className="p-8 text-center text-slate-500">Nema rezultata za odabrane filtere.</Card>
       ) : (
