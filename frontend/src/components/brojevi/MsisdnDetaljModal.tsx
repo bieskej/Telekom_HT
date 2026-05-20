@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ShieldAlert, Unlock } from 'lucide-react'
+import { Printer, ShieldAlert, Unlock } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -127,7 +127,15 @@ export function MsisdnDetaljModal({
                 )}
               </dl>
             )}
-            {detalj.status === 'zauzet' && <MsisdnUgovorResendButton msisdnId={detalj.id} />}
+            {detalj.status === 'zauzet' && (
+              <span className="flex flex-wrap gap-2">
+                <MsisdnUgovorResendButton msisdnId={detalj.id} />
+                <Button variant="outline" size="sm" className="no-print" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4" />
+                  Ispiši
+                </Button>
+              </span>
+            )}
             {detalj.status === 'karantena' && mozeKarantena && (
               <KarantenaSekcija
                 detalj={detalj}
