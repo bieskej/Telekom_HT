@@ -4,7 +4,7 @@ import { MsisdnUgovorResendButton } from '@/components/email/MsisdnUgovorResendB
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import type { MsisdnItem } from '@/types/api'
-import { Badge } from '@/components/ui/Badge'
+import { MsisdnStatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { exportToCsv, formatStatus } from '@/lib/utils'
@@ -66,7 +66,7 @@ export function BrojeviTable({
       <Card className="hidden overflow-hidden md:block">
         <span className="block overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-100 bg-[#F5F5F5]/80">
+            <thead className="border-b border-slate-100 bg-[#F5F5F5]/80 dark:border-slate-800 dark:bg-slate-800/60">
               <tr>
                 <th className="w-10 p-4">
                   <Checkbox.Root
@@ -79,20 +79,22 @@ export function BrojeviTable({
                     </Checkbox.Indicator>
                   </Checkbox.Root>
                 </th>
-                <th className="p-4 font-semibold text-slate-700">Broj</th>
-                <th className="p-4 font-semibold text-slate-700">Status</th>
-                <th className="p-4 font-semibold text-slate-700">Općina</th>
-                <th className="p-4 font-semibold text-slate-700">Kvaliteta</th>
-                <th className="p-4 font-semibold text-slate-700">Korisnik</th>
-                <th className="p-4 font-semibold text-slate-700">Dokumenti</th>
-                {mozeKarantena && <th className="p-4 font-semibold text-slate-700">Karantena</th>}
+                <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Broj</th>
+                <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Status</th>
+                <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Općina</th>
+                <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Kvaliteta</th>
+                <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Korisnik</th>
+                <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Dokumenti</th>
+                {mozeKarantena && (
+                  <th className="p-4 font-semibold text-slate-700 dark:text-slate-300">Karantena</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
                 <tr
                   key={row.id}
-                  className="cursor-pointer border-b border-slate-50 transition hover:bg-[#0054A6]/4"
+                  className="cursor-pointer border-b border-slate-50 transition hover:bg-[#0054A6]/4 dark:border-slate-800 dark:hover:bg-[#0054A6]/10"
                   onClick={() => onDetalj?.(row.id)}
                 >
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
@@ -110,15 +112,13 @@ export function BrojeviTable({
                   </td>
                   <td className="p-4 font-mono font-medium text-[#0054A6]">{row.broj_formatiran}</td>
                   <td className="p-4">
-                    <Badge variant={row.status as 'slobodan' | 'zauzet' | 'karantena'}>
-                      {formatStatus(row.status)}
-                    </Badge>
+                    <MsisdnStatusBadge status={row.status} />
                   </td>
-                  <td className="p-4 text-slate-600">{row.opcina_naziv ?? '—'}</td>
-                  <td className="p-4 capitalize text-slate-600">
+                  <td className="p-4 text-slate-600 dark:text-slate-400">{row.opcina_naziv ?? '—'}</td>
+                  <td className="p-4 capitalize text-slate-600 dark:text-slate-400">
                     {row.kvaliteta_naziv ?? row.kvaliteta ?? '—'}
                   </td>
-                  <td className="p-4 text-slate-600">
+                  <td className="p-4 text-slate-600 dark:text-slate-400">
                     {row.ime ? `${row.ime} ${row.prezime}` : '—'}
                   </td>
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
@@ -193,12 +193,10 @@ export function BrojeviTable({
                 )}
                 <span>
                   <p className="font-mono text-base font-semibold text-[#0054A6]">{row.broj_formatiran}</p>
-                  <p className="mt-1 text-sm text-slate-500">{row.opcina_naziv ?? '—'}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{row.opcina_naziv ?? '—'}</p>
                 </span>
               </span>
-              <Badge variant={row.status as 'slobodan' | 'zauzet' | 'karantena'}>
-                {formatStatus(row.status)}
-              </Badge>
+              <MsisdnStatusBadge status={row.status} />
             </span>
             {(row.ime || row.kvaliteta) && (
               <p className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-600">

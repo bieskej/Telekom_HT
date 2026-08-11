@@ -1,0 +1,22 @@
+﻿# local/editor state
+.cursor/
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+
+# node
+node_modules/
+frontend/node_modules/
+
+# build output
+dist/
+
+# logs
+*.log

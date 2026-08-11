@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Clock, RefreshCw, X } from 'lucide-react'
-import { api } from '@/lib/api'
-import type { KvalitetaItem, Opcina } from '@/types/api'
+import { AlertTriangle, Clock, RefreshCw, Search, X } from 'lucide-react'
+import { api, mapApiError } from '@/lib/api'
+import type { KvalitetaItem, Opcina, ProvjeriJmbgResponse } from '@/types/api'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useReservationTimer } from '@/hooks/useReservationTimer'
@@ -21,6 +22,15 @@ function validirajJmbg(jmbg: string): boolean {
   return k === parseInt(jmbg[12], 10)
 }
 
+function validirajEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+}
+
+function validirajPostanskiBroj(postanskiBroj: string): boolean {
+  const t = postanskiBroj.trim()
+  return !t || /^\d{5}$/.test(t)
+}
+
 interface DodjelaFormaProps {
   onSuccess?: () => void
   initialMsisdnId?: number
@@ -30,6 +40,7 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
   const [opcine, setOpcine] = useState<Opcina[]>([])
   const [kvalitete, setKvalitete] = useState<KvalitetaItem[]>([])
   const [opcina, setOpcina] = useState('Mostar')
+  const [opcinaPretraga, setOpcinaPretraga] = useState('')
   const [kvalitetaId, setKvalitetaId] = useState('')
   const [ime, setIme] = useState('')
   const [prezime, setPrezime] = useState('')
@@ -50,6 +61,13 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
   const rezerviranIdRef = useRef<number | null>(null)
   const [successOpen, setSuccessOpen] = useState(false)
   const [dokumenti, setDokumenti] = useState<DodjelaDokumentStavka[]>([])
+  const [catalogReady, setCatalogReady] = useState(false)
+  const [jmbgProvjera, setJmbgProvjera] = useState<ProvjeriJmbgResponse | null>(null)
+  const [jmbgProvjeraLoading, setJmbgProvjeraLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [emailError, setEmailError] = useState<string | undefined>()
+  const [postanskiError, setPostanskiError] = useState<string | undefined>()
+  const [jmbgSubmitError, setJmbgSubmitError] = useState<string | undefined>()
   const { formatTime, expired } = useReservationTimer(timerInit)
 
   useEffect(() => {
@@ -58,8 +76,9 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
         setOpcine(o)
         setKvalitete(k)
         if (k.length) setKvalitetaId(String(k[0].id))
+        setCatalogReady(true)
       })
-      .catch(() => toast.error('Greška pri učitavanju podataka'))
+      .catch((e) => toast.error(mapApiError(e, 'Katalog općina/kvaliteta nije učitan.')))
   }, [])
 
   const odabranaKvaliteta = useMemo(
@@ -67,8 +86,65 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
     [kvalitete, kvalitetaId],
   )
 
+  const opcineFiltrirane = useMemo(() => {
+    const q = opcinaPretraga.trim().toLowerCase()
+    if (!q) return opcine
+    return opcine.filter((o) => o.naziv.toLowerCase().includes(q))
+  }, [opcine, opcinaPretraga])
+
+  const opcineOptions = useMemo(
+    () =>
+      opcineFiltrirane.map((o) => ({
+        value: o.naziv,
+        label: `${o.naziv} (${(o.broj_msisdn ?? 0).toLocaleString('hr-HR')})`,
+      })),
+    [opcineFiltrirane],
+  )
+
+  useEffect(() => {
+    if (!opcine.length) return
+    const imaMostar = opcine.some((o) => o.naziv === 'Mostar')
+    if (!opcine.some((o) => o.naziv === opcina)) {
+      setOpcina(imaMostar ? 'Mostar' : opcine[0].naziv)
+    }
+  }, [opcine, opcina])
+
+  useEffect(() => {
+    if (opcineOptions.length === 0) return
+    if (!opcineOptions.some((o) => o.value === opcina)) {
+      setOpcina(opcineOptions[0].value)
+    }
+  }, [opcineOptions, opcina])
+
   const jmbgError =
     jmbg.length === 13 && !validirajJmbg(jmbg) ? 'Neispravan JMBG (modul 11)' : undefined
+
+  useEffect(() => {
+    if (jmbg.length !== 13 || !validirajJmbg(jmbg)) {
+      setJmbgProvjera(null)
+      setJmbgProvjeraLoading(false)
+      return
+    }
+    let active = true
+    const timer = window.setTimeout(() => {
+      setJmbgProvjeraLoading(true)
+      api
+        .provjeriJmbg(jmbg, ime, prezime)
+        .then((res) => {
+          if (active) setJmbgProvjera(res)
+        })
+        .catch(() => {
+          if (active) setJmbgProvjera(null)
+        })
+        .finally(() => {
+          if (active) setJmbgProvjeraLoading(false)
+        })
+    }, 400)
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [jmbg, ime, prezime])
 
   const ponistiAktivnuRezervaciju = useCallback(async () => {
     const id = rezerviranIdRef.current
@@ -84,58 +160,82 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
     setTimerInit(null)
   }, [])
 
-  const rezervirajSljedeci = useCallback(async () => {
-    try {
-      if (rezerviranIdRef.current) {
-        await api.ponistiRezervaciju(rezerviranIdRef.current).catch(() => {})
+  const rezervirajSljedeci = useCallback(
+    async (opts?: { toast?: boolean }) => {
+      const showToast = opts?.toast !== false
+      try {
+        const prevId = rezerviranIdRef.current
+        if (prevId) {
+          await api.ponistiRezervaciju(prevId).catch(() => {})
+          rezerviranIdRef.current = null
+        }
+        const kid = kvalitetaId ? Number(kvalitetaId) : undefined
+        const rez = await api.rezervirajSljedeci(opcina, kid, prevId ?? undefined)
+        rezerviranIdRef.current = rez.msisdn_id
+        setRezerviranId(rez.msisdn_id)
+        setRezerviraniBroj(rez.broj_formatiran)
+        setTimerInit(rez.preostalo_sekundi)
+        if (showToast) {
+          toast.success(`Broj ${rez.broj_formatiran} rezerviran na 5 minuta`)
+        }
+      } catch (e) {
+        setRezerviranId(null)
+        setRezerviraniBroj(null)
+        setTimerInit(null)
         rezerviranIdRef.current = null
+        if (showToast) {
+          toast.error(mapApiError(e, 'Rezervacija broja nije uspjela.'))
+        }
       }
-      const kid = kvalitetaId ? Number(kvalitetaId) : undefined
-      const rez = await api.rezervirajSljedeci(opcina, kid)
-      rezerviranIdRef.current = rez.msisdn_id
-      setRezerviranId(rez.msisdn_id)
-      setRezerviraniBroj(rez.broj_formatiran)
-      setTimerInit(rez.preostalo_sekundi)
-      toast.success(`Broj ${rez.broj_formatiran} rezerviran na 5 minuta`)
-    } catch (e) {
-      setRezerviranId(null)
-      setRezerviraniBroj(null)
-      setTimerInit(null)
-      rezerviranIdRef.current = null
-      toast.error(e instanceof Error ? e.message : 'Greška pri rezervaciji')
-    }
-  }, [opcina, kvalitetaId])
-
-  const rezervirajOdabrani = useCallback(async (msisdnId: number) => {
-    try {
-      if (rezerviranIdRef.current) {
-        await api.ponistiRezervaciju(rezerviranIdRef.current).catch(() => {})
-      }
-      const rez = await api.rezerviraj(msisdnId)
-      rezerviranIdRef.current = rez.msisdn_id
-      setRezerviranId(rez.msisdn_id)
-      setRezerviraniBroj(rez.broj_formatiran)
-      setTimerInit(rez.preostalo_sekundi)
-      toast.success(`Broj ${rez.broj_formatiran} rezerviran na 5 minuta`)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Greška pri rezervaciji')
-    }
-  }, [])
+    },
+    [opcina, kvalitetaId],
+  )
 
   useEffect(() => {
-    if (initialMsisdnId) {
-      void rezervirajOdabrani(initialMsisdnId)
-      return () => {
-        const id = rezerviranIdRef.current
-        if (id) api.ponistiRezervaciju(id).catch(() => {})
+    if (!catalogReady) return
+
+    let active = true
+
+    const run = async () => {
+      try {
+        if (rezerviranIdRef.current) {
+          await api.ponistiRezervaciju(rezerviranIdRef.current).catch(() => {})
+          rezerviranIdRef.current = null
+        }
+        const rez = initialMsisdnId
+          ? await api.rezerviraj(initialMsisdnId)
+          : await api.rezervirajSljedeci(opcina, kvalitetaId ? Number(kvalitetaId) : undefined)
+        if (!active) {
+          await api.ponistiRezervaciju(rez.msisdn_id).catch(() => {})
+          return
+        }
+        rezerviranIdRef.current = rez.msisdn_id
+        setRezerviranId(rez.msisdn_id)
+        setRezerviraniBroj(rez.broj_formatiran)
+        setTimerInit(rez.preostalo_sekundi)
+        toast.success(`Broj ${rez.broj_formatiran} rezerviran na 5 minuta`)
+      } catch (e) {
+        if (!active) return
+        setRezerviranId(null)
+        setRezerviraniBroj(null)
+        setTimerInit(null)
+        rezerviranIdRef.current = null
+        toast.error(mapApiError(e, 'Rezervacija broja nije uspjela.'))
       }
     }
-    void rezervirajSljedeci()
+
+    void run()
+
     return () => {
+      active = false
       const id = rezerviranIdRef.current
-      if (id) api.ponistiRezervaciju(id).catch(() => {})
+      if (id) {
+        api.ponistiRezervaciju(id).catch(() => {})
+        rezerviranIdRef.current = null
+      }
     }
-  }, [initialMsisdnId, opcina, kvalitetaId, rezervirajSljedeci, rezervirajOdabrani])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jednom nakon učitavanja kataloga
+  }, [catalogReady, initialMsisdnId])
 
   const buildPlacanje = () => ({
     nacin: nacinPlacanja,
@@ -151,14 +251,26 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validirajJmbg(jmbg)) {
-      toast.error('Neispravan JMBG')
-      return
-    }
+    const jErr =
+      jmbg.length !== 13 || !validirajJmbg(jmbg) ? 'Unesite ispravan JMBG (13 znamenki, modul 11).' : undefined
+    const eErr = !validirajEmail(email) ? 'Unesite ispravnu email adresu.' : undefined
+    const pErr = !validirajPostanskiBroj(postanskiBroj)
+      ? 'Poštanski broj mora imati točno 5 znamenki.'
+      : undefined
+    setJmbgSubmitError(jErr)
+    setEmailError(eErr)
+    setPostanskiError(pErr)
+    if (jErr || eErr || pErr) return
     if (!rezerviranId) {
       toast.error('Nema aktivne rezervacije broja. Pričekajte rezervaciju ili odaberite općinu ponovo.')
       return
     }
+    setConfirmOpen(true)
+  }
+
+  const izvrsiDodjelu = async () => {
+    if (!rezerviranId) return
+    setConfirmOpen(false)
     setLoading(true)
     try {
       const res = await api.dodijeliBroj({
@@ -199,6 +311,7 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
       setCvv('')
       setImeVlasnika('')
       setNacinPlacanja('gotovina')
+      setJmbgProvjera(null)
       rezerviranIdRef.current = null
       setRezerviranId(null)
       setRezerviraniBroj(null)
@@ -206,7 +319,7 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
       onSuccess?.()
       void rezervirajSljedeci()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Greška pri dodjeli')
+      toast.error(mapApiError(err, 'Dodjela broja nije uspjela.'))
     } finally {
       setLoading(false)
     }
@@ -235,7 +348,12 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => void rezervirajSljedeci()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void rezervirajSljedeci({ toast: true })}
+                >
                   <RefreshCw className="h-4 w-4" />
                   Novi broj
                 </Button>
@@ -254,15 +372,28 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
           )}
 
           <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-2">
-            <Select
-              label="Općina"
-              value={opcina}
-              onValueChange={setOpcina}
-              options={opcine.map((o) => ({
-                value: o.naziv,
-                label: `${o.naziv} (${(o.broj_msisdn ?? 0).toLocaleString('hr-HR')})`,
-              }))}
-            />
+            <span className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Općina</label>
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5">
+                <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <input
+                  type="text"
+                  value={opcinaPretraga}
+                  onChange={(e) => setOpcinaPretraga(e.target.value)}
+                  placeholder="Pretraži općinu…"
+                  className="flex-1 bg-transparent text-sm outline-none"
+                />
+              </div>
+              {opcineOptions.length === 0 ? (
+                <p className="text-xs text-slate-500">Nema općina za ovaj upit.</p>
+              ) : (
+                <Select
+                  value={opcina}
+                  onValueChange={setOpcina}
+                  options={opcineOptions}
+                />
+              )}
+            </span>
             <Select
               label="Kvaliteta broja"
               value={kvalitetaId}
@@ -283,12 +414,41 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
             <Input
               label="JMBG"
               value={jmbg}
-              onChange={(e) => setJmbg(e.target.value.replace(/\D/g, '').slice(0, 13))}
+              onChange={(e) => {
+                setJmbg(e.target.value.replace(/\D/g, '').slice(0, 13))
+                setJmbgSubmitError(undefined)
+              }}
               maxLength={13}
-              error={jmbgError}
+              error={jmbgSubmitError ?? jmbgError}
               required
             />
-            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            {(jmbgProvjeraLoading || (jmbgProvjera?.upozorenja.length ?? 0) > 0) && (
+              <div className="lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {jmbgProvjeraLoading ? (
+                  <p>Provjera JMBG-a…</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {jmbgProvjera?.upozorenja.map((u) => (
+                      <li key={u} className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{u}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setEmailError(undefined)
+              }}
+              error={emailError}
+              required
+            />
             <Input
               label="Adresa"
               value={adresa}
@@ -300,7 +460,12 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
             <Input
               label="Poštanski broj"
               value={postanskiBroj}
-              onChange={(e) => setPostanskiBroj(e.target.value)}
+              onChange={(e) => {
+                setPostanskiBroj(e.target.value.replace(/\D/g, '').slice(0, 5))
+                setPostanskiError(undefined)
+              }}
+              maxLength={5}
+              error={postanskiError}
               required
             />
             <PlacanjePolja
@@ -325,6 +490,69 @@ export function DodjelaForma({ onSuccess, initialMsisdnId }: DodjelaFormaProps) 
       </Card>
 
       <DodjelaSuccessModal open={successOpen} onOpenChange={setSuccessOpen} stavke={dokumenti} />
+
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Potvrda dodjele"
+        description="Provjerite podatke prije dodjele broja."
+      >
+        <dl className="space-y-2 text-sm">
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Broj</dt>
+            <dd className="font-mono font-semibold text-[#0054A6]">{rezerviraniBroj ?? '—'}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Općina</dt>
+            <dd className="font-medium">{opcina}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Kvaliteta</dt>
+            <dd className="font-medium capitalize">{odabranaKvaliteta?.naziv ?? '—'}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Korisnik</dt>
+            <dd className="font-medium text-right">
+              {ime} {prezime}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">JMBG</dt>
+            <dd className="font-mono">{jmbg}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Email</dt>
+            <dd>{email}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Adresa</dt>
+            <dd className="text-right">
+              {adresa}, {postanskiBroj} {grad}
+            </dd>
+          </div>
+        </dl>
+        {(jmbgProvjera?.upozorenja.length ?? 0) > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="mb-2 flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4" />
+              Upozorenja
+            </p>
+            <ul className="list-inside list-disc space-y-1">
+              {jmbgProvjera?.upozorenja.map((u) => (
+                <li key={u}>{u}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
+            Odustani
+          </Button>
+          <Button type="button" loading={loading} onClick={() => void izvrsiDodjelu()}>
+            Potvrdi dodjelu
+          </Button>
+        </div>
+      </Dialog>
     </>
   )
 }

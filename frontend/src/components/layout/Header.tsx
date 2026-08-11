@@ -1,4 +1,5 @@
-﻿import { LogOut, Moon, Sun, User } from 'lucide-react'
+﻿import { CircleHelp, LogOut, Moon, Sun, User } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useDarkMode } from '@/hooks/useDarkMode'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
@@ -21,6 +22,14 @@ export function Header({ onMenuClick, title }: HeaderProps) {
           <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 lg:text-xl">{title}</h1>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            to="/pomoc"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-[#0054A6] dark:text-slate-300 dark:hover:bg-slate-800"
+            aria-label="Pomoć"
+            title="Pomoć"
+          >
+            <CircleHelp className="h-5 w-5" />
+          </Link>
           <Button variant="ghost" size="sm" onClick={toggle} aria-label="Tamni način">
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>

@@ -123,3 +123,59 @@ def test_oslobodi_prodaja_403(client: TestClient, db, admin_token: str):
         json={},
     )
     assert res.status_code == 403
+
+
+def test_vrati_aktivno_zadrzava_jmbg(client: TestClient, db, admin_token: str):
+    msisdn_id = _zauzet_broj(db)
+    if not msisdn_id:
+        return
+    jmbg_prije = db.execute(
+        text("SELECT jmbg FROM msisdn WHERE id = :id"),
+        {"id": msisdn_id},
+    ).scalar()
+    if not jmbg_prije:
+        return
+    _u_karantenu(client, admin_token, msisdn_id, 30)
+    res = client.post(
+        f"/msisdn/{msisdn_id}/vrati-aktivno",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"razlog": "Test povrat u aktivno"},
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "zauzet"
+    row = db.execute(
+        text("SELECT status, jmbg, datum_karantene FROM msisdn WHERE id = :id"),
+        {"id": msisdn_id},
+    ).one()
+    assert row.status == "zauzet"
+    assert row.jmbg == jmbg_prije
+    assert row.datum_karantene is None
+    hist = db.execute(
+        text(
+            """
+            SELECT akcija FROM msisdn_history
+            WHERE msisdn_id = :id AND akcija = 'vraceno_u_aktivno'
+            ORDER BY id DESC LIMIT 1
+            """
+        ),
+        {"id": msisdn_id},
+    ).fetchone()
+    assert hist is not None
+
+
+def test_vrati_aktivno_prodaja_ok(client: TestClient, db, admin_token: str):
+    msisdn_id = _zauzet_broj(db)
+    if not msisdn_id:
+        return
+    _u_karantenu(client, admin_token, msisdn_id, 20)
+    prodaja = client.post("/prijava", json={"email": "prodaja@eronet.ba", "lozinka": "prodaja"})
+    if prodaja.status_code != 200:
+        return
+    prodaja_token = prodaja.json()["access_token"]
+    res = client.post(
+        f"/msisdn/{msisdn_id}/vrati-aktivno",
+        headers={"Authorization": f"Bearer {prodaja_token}"},
+        json={},
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "zauzet"

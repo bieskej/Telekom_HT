@@ -21,6 +21,9 @@ import type {
   TestEmailResponse,
 } from '@/types/api'
 import { authStorage } from '@/lib/authStorage'
+import { formatApiDetail } from '@/lib/apiErrors'
+
+export { mapApiError } from '@/lib/apiErrors'
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api'
 
@@ -37,14 +40,14 @@ async function downloadPdf(path: string, filename: string): Promise<void> {
     throw new Error('Sesija je istekla.')
   }
   if (!res.ok) {
-    let detail = 'Preuzimanje nije uspjelo.'
+    let detail: unknown = 'Preuzimanje nije uspjelo.'
     try {
       const body = await res.json()
       detail = body.detail ?? detail
     } catch {
       detail = res.statusText
     }
-    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    throw new Error(formatApiDetail(detail))
   }
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
@@ -75,14 +78,14 @@ async function request<T>(path: string, init?: RequestOptions): Promise<T> {
   }
 
   if (!res.ok) {
-    let detail = 'Došlo je do greške.'
+    let detail: unknown = 'Došlo je do greške.'
     try {
       const body = await res.json()
       detail = body.detail ?? (typeof body === 'string' ? body : detail)
     } catch {
-      detail = res.statusText
+      detail = res.statusText || 'Došlo je do greške.'
     }
-    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    throw new Error(formatApiDetail(detail))
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
@@ -124,6 +127,13 @@ export const api = {
       if (v !== undefined && v !== '') q.set(k, String(v))
     })
     return request<PretragaResponse>(`/msisdn/pretraga?${q}`)
+  },
+
+  provjeriJmbg: (jmbg: string, ime?: string, prezime?: string) => {
+    const q = new URLSearchParams({ jmbg })
+    if (ime?.trim()) q.set('ime', ime.trim())
+    if (prezime?.trim()) q.set('prezime', prezime.trim())
+    return request<import('@/types/api').ProvjeriJmbgResponse>(`/msisdn/provjeri-jmbg?${q}`)
   },
 
   dodijeliBroj: (body: {
@@ -289,6 +299,15 @@ export const api = {
       },
     ),
 
+  vratiIzKaranteneAktivno: (msisdnId: number, razlog?: string) =>
+    request<{ poruka: string; msisdn_id: number; status: string }>(
+      `/msisdn/${msisdnId}/vrati-aktivno`,
+      {
+        method: 'POST',
+        body: JSON.stringify(razlog ? { razlog } : {}),
+      },
+    ),
+
   oslobodi: (msisdnId: number, karantena_dana?: number) =>
     request<{ poruka: string }>(`/oslobodi/${msisdnId}`, {
       method: 'POST',
@@ -298,12 +317,17 @@ export const api = {
   rezerviraj: (msisdnId: number) =>
     request<RezervirajResponse>(`/rezerviraj/${msisdnId}`, { method: 'POST' }),
 
-  rezervirajSljedeci: (opcinaNaziv: string, kvalitetaId?: number) =>
+  rezervirajSljedeci: (
+    opcinaNaziv: string,
+    kvalitetaId?: number,
+    excludeMsisdnId?: number,
+  ) =>
     request<RezervirajResponse>('/rezerviraj-sljedeci', {
       method: 'POST',
       body: JSON.stringify({
         opcina_naziv: opcinaNaziv,
         ...(kvalitetaId != null ? { kvaliteta_id: kvalitetaId } : {}),
+        ...(excludeMsisdnId != null ? { exclude_msisdn_id: excludeMsisdnId } : {}),
       }),
     }),
 

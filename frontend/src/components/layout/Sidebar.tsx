@@ -1,4 +1,21 @@
-﻿import { BarChart3, GitBranch, Hash, LayoutDashboard, Mail, Menu, PhoneCall, Radio, ScrollText, Upload, UserCircle, Users, Wrench, X } from 'lucide-react'
+﻿import {
+  BarChart3,
+  CircleHelp,
+  FlaskConical,
+  GitBranch,
+  Hash,
+  LayoutDashboard,
+  Mail,
+  Menu,
+  PhoneCall,
+  Radio,
+  ScrollText,
+  Upload,
+  UserCircle,
+  Users,
+  Wrench,
+  X,
+} from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
@@ -17,7 +34,13 @@ const baseNav = [
   { to: '/admin/import', label: 'Import RAK', icon: Upload, uloge: ['admin'] as const },
   { to: '/admin/email-log', label: 'Email log', icon: Mail, uloge: ['admin'] as const },
   { to: '/admin/audit-log', label: 'Audit log', icon: ScrollText, uloge: ['admin'] as const },
+  { to: '/pomoc', label: 'Pomoć', icon: CircleHelp },
 ]
+
+const devOnlyNav =
+  import.meta.env.DEV
+    ? [{ to: '/admin/eval-priprema', label: 'Eval priprema', icon: FlaskConical, uloge: ['admin'] as const }]
+    : []
 
 interface SidebarProps {
   open: boolean
@@ -26,7 +49,9 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { hasUloga } = useAuth()
-  const navItems = baseNav.filter((item) => !item.uloge || item.uloge.some((u) => hasUloga(u)))
+  const navItems = [...baseNav, ...devOnlyNav].filter(
+    (item) => !item.uloge || item.uloge.some((u) => hasUloga(u)),
+  )
 
   return (
     <>

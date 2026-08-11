@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Tjedni pregled — HT Eronet{% endblock %}
+{% block subtitle %}Tjedni digest za administratore{% endblock %}
+{% block content %}
+<p style="margin:0 0 20px;">Pregled aktivnosti za razdoblje <strong>{{ razdoblje }}</strong>.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-radius:8px;margin-bottom:24px;">
+  <tr><td style="padding:14px 16px;"><strong>Ukupno dodjela (7 dana):</strong> {{ ukupno_dodjela }}</td></tr>
+</table>
+<h3 style="margin:0 0 12px;color:#0054A6;font-size:16px;">Top 5 općina po dodjelama</h3>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;margin-bottom:24px;">
+  <tr style="background:#0054A6;color:#fff;">
+    <th style="padding:8px 12px;text-align:left;">Općina</th>
+    <th style="padding:8px 12px;text-align:right;">Dodjela</th>
+  </tr>
+  {% for o in top_opcine %}
+  <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{{ o.naziv }}</td>
+      <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #e2e8f0;">{{ o.broj }}</td></tr>
+  {% endfor %}
+</table>
+<h3 style="margin:0 0 12px;color:#0054A6;font-size:16px;">Top 5 radnika po dodjelama</h3>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;margin-bottom:24px;">
+  <tr style="background:#0054A6;color:#fff;">
+    <th style="padding:8px 12px;text-align:left;">Radnik</th>
+    <th style="padding:8px 12px;text-align:right;">Dodjela</th>
+  </tr>
+  {% for r in top_radnici %}
+  <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{{ r.ime }}</td>
+      <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #e2e8f0;">{{ r.broj }}</td></tr>
+  {% endfor %}
+</table>
+<h3 style="margin:0 0 12px;color:#0054A6;font-size:16px;">Zadnjih 7 dana</h3>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;">
+  <tr style="background:#0054A6;color:#fff;">
+    <th style="padding:8px 12px;text-align:left;">Datum</th>
+    <th style="padding:8px 12px;text-align:right;">Dodjela</th>
+  </tr>
+  {% for d in po_danima %}
+  <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{{ d.datum }}</td>
+      <td style="padding:8px 12px;text-align:right;border-bottom:1px solid #e2e8f0;">{{ d.broj }}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

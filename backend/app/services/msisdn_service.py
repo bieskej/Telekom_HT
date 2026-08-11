@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Kvaliteta, Msisdn, MsisdnHistory
-from app.services.jmbg import validiraj_jmbg
+from app.services.jmbg import normaliziraj_jmbg, validiraj_jmbg
 from app.services.phone import formatiraj_broj
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,141 @@ OPCINA_JOIN = """
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _validiraj_postanski_broj(postanski_broj: str) -> None:
+    pb = (postanski_broj or "").strip()
+    if not pb:
+        return
+    if not (pb.isdigit() and len(pb) == 5):
+        raise HTTPException(
+            status_code=400,
+            detail="Poštanski broj mora imati točno 5 znamenki.",
+        )
+
+
+def _ime_prezime_razlicito(
+    unos_ime: str | None,
+    unos_prezime: str | None,
+    ref_ime: str | None,
+    ref_prezime: str | None,
+) -> bool:
+    if not (ref_ime or ref_prezime):
+        return False
+    if not ((unos_ime or "").strip() or (unos_prezime or "").strip()):
+        return False
+    unos = f"{(unos_ime or '').strip().lower()} {(unos_prezime or '').strip().lower()}".strip()
+    ref = f"{(ref_ime or '').strip().lower()} {(ref_prezime or '').strip().lower()}".strip()
+    return unos != ref
+
+
+def provjeri_jmbg_dodjela(
+    db: Session,
+    jmbg: str,
+    ime: str | None = None,
+    prezime: str | None = None,
+) -> dict:
+    jmbg_norm = normaliziraj_jmbg(jmbg)
+    if len(jmbg_norm) != 13 or not validiraj_jmbg(jmbg_norm):
+        return {
+            "valid": False,
+            "jmbg": jmbg_norm,
+            "postojeci_brojevi": 0,
+            "prethodno_ime": None,
+            "prethodno_prezime": None,
+            "portal_korisnik": None,
+            "upozorenja": ["Neispravan JMBG (modul 11)."],
+        }
+
+    postojeci_brojevi = (
+        db.execute(
+            text(
+                """
+                SELECT COUNT(*)::int
+                FROM msisdn
+                WHERE jmbg = :jmbg AND status IN ('zauzet', 'karantena')
+                """
+            ),
+            {"jmbg": jmbg_norm},
+        ).scalar()
+        or 0
+    )
+
+    zadnja = db.execute(
+        text(
+            """
+            SELECT ime, prezime
+            FROM msisdn
+            WHERE jmbg = :jmbg AND status IN ('zauzet', 'karantena')
+            ORDER BY datum_dodjele DESC NULLS LAST, id DESC
+            LIMIT 1
+            """
+        ),
+        {"jmbg": jmbg_norm},
+    ).fetchone()
+
+    prethodno_ime: str | None = None
+    prethodno_prezime: str | None = None
+    if zadnja and (zadnja.ime or zadnja.prezime):
+        prethodno_ime = (zadnja.ime or "").strip() or None
+        prethodno_prezime = (zadnja.prezime or "").strip() or None
+    elif postojeci_brojevi > 0:
+        fallback = db.execute(
+            text(
+                """
+                SELECT COALESCE(MAX(ime), '') AS ime, COALESCE(MAX(prezime), '') AS prezime
+                FROM msisdn
+                WHERE jmbg = :jmbg AND status IN ('zauzet', 'karantena')
+                """
+            ),
+            {"jmbg": jmbg_norm},
+        ).fetchone()
+        if fallback:
+            prethodno_ime = (fallback.ime or "").strip() or None
+            prethodno_prezime = (fallback.prezime or "").strip() or None
+
+    portal_row = db.execute(
+        text(
+            """
+            SELECT ime, prezime, email
+            FROM radnici
+            WHERE uloga = 'kupac' AND jmbg = :jmbg
+            LIMIT 1
+            """
+        ),
+        {"jmbg": jmbg_norm},
+    ).fetchone()
+
+    portal_korisnik = None
+    if portal_row:
+        portal_korisnik = {
+            "ime": portal_row.ime or "",
+            "prezime": portal_row.prezime or "",
+            "email": portal_row.email or "",
+        }
+
+    upozorenja: list[str] = []
+    if postojeci_brojevi > 0:
+        upozorenja.append(f"Ovaj JMBG već ima {postojeci_brojevi} dodijeljenih brojeva.")
+        if _ime_prezime_razlicito(ime, prezime, prethodno_ime, prethodno_prezime):
+            ref = f"{prethodno_ime or ''} {prethodno_prezime or ''}".strip()
+            upozorenja.append(f"Prethodno zabilježeno ime: {ref} (različito od unosa).")
+
+    if portal_korisnik and _ime_prezime_razlicito(
+        ime, prezime, portal_korisnik["ime"], portal_korisnik["prezime"]
+    ):
+        ref = f"{portal_korisnik['ime']} {portal_korisnik['prezime']}".strip()
+        upozorenja.append(f"Registriran kupac portala: {ref} (različito od unosa).")
+
+    return {
+        "valid": True,
+        "jmbg": jmbg_norm,
+        "postojeci_brojevi": postojeci_brojevi,
+        "prethodno_ime": prethodno_ime,
+        "prethodno_prezime": prethodno_prezime,
+        "portal_korisnik": portal_korisnik,
+        "upozorenja": upozorenja,
+    }
 
 
 def _get_silver_id(db: Session) -> int:
@@ -181,6 +316,7 @@ def _find_slobodan_ids(
     limit: int,
     kvaliteta_id: int | None = None,
     fallback_zupanija: bool = True,
+    exclude_msisdn_id: int | None = None,
 ) -> list[int]:
     """Vrati ID-ove slobodnih brojeva za općinu (s rezerviranim filterom).
 
@@ -190,10 +326,14 @@ def _find_slobodan_ids(
     ako u Čapljini nema slobodnih).
     """
     kval_filter = ""
+    exclude_filter = ""
     params: dict = {"opcina_naziv": opcina_naziv, "limit": limit}
     if kvaliteta_id is not None:
         kval_filter = "AND m.kvaliteta_id = :kvaliteta_id"
         params["kvaliteta_id"] = kvaliteta_id
+    if exclude_msisdn_id is not None:
+        exclude_filter = "AND m.id != :exclude_msisdn_id"
+        params["exclude_msisdn_id"] = exclude_msisdn_id
     sql = text(
         f"""
         SELECT m.id
@@ -202,6 +342,7 @@ def _find_slobodan_ids(
         WHERE o.naziv = :opcina_naziv
           AND {SLOBODAN_UVJET}
           {kval_filter}
+          {exclude_filter}
         ORDER BY m.broj
         LIMIT :limit
         FOR UPDATE OF m SKIP LOCKED
@@ -222,6 +363,7 @@ def _find_slobodan_ids(
               )
           AND {SLOBODAN_UVJET}
           {kval_filter}
+          {exclude_filter}
         ORDER BY m.broj
         LIMIT :limit
         FOR UPDATE OF m SKIP LOCKED
@@ -272,8 +414,10 @@ def dodijeli_broj(
     radnik_uloga: str | None = None,
     placanje: dict | None = None,
 ) -> dict:
+    jmbg = normaliziraj_jmbg(jmbg)
     if not validiraj_jmbg(jmbg):
         raise HTTPException(status_code=400, detail="JMBG nije validan (modul 11).")
+    _validiraj_postanski_broj(postanski_broj)
 
     kval_trazena = _resolve_kvaliteta(db, kvaliteta_id, radnik_uloga)
     sada = _utcnow()
@@ -509,6 +653,52 @@ def oslobodi_iz_karantene_admin(
     }
 
 
+def vrati_iz_karantene_u_aktivno(
+    db: Session,
+    msisdn_id: int,
+    razlog: str | None = None,
+    radnik_id: int | None = None,
+) -> dict:
+    msisdn = db.get(Msisdn, msisdn_id)
+    if not msisdn:
+        raise HTTPException(status_code=404, detail="Broj nije pronađen.")
+    if msisdn.status != "karantena":
+        raise HTTPException(status_code=400, detail="Broj mora biti u statusu 'karantena'.")
+
+    email = msisdn.email
+    ime = msisdn.ime
+    prezime = msisdn.prezime
+    broj = msisdn.broj
+
+    msisdn.status = "zauzet"
+    msisdn.datum_karantene = None
+    msisdn.karantena_razlog = None
+    msisdn.rezerviran_do = None
+    msisdn.updated_at = _utcnow()
+
+    napomena = razlog.strip() if razlog else "Vraćeno u aktivno iz karantene"
+    _log_history(
+        db,
+        msisdn_id,
+        "karantena",
+        "zauzet",
+        "vraceno_u_aktivno",
+        napomena,
+        radnik_id=radnik_id,
+    )
+    db.commit()
+
+    from app.services.email_notifications import posalji_email_karantena_end
+
+    posalji_email_karantena_end(db, msisdn_id, email, ime, prezime, broj)
+
+    return {
+        "poruka": "Broj je vraćen u aktivno stanje.",
+        "msisdn_id": msisdn_id,
+        "status": "zauzet",
+    }
+
+
 def dohvati_msisdn_detalj(db: Session, msisdn_id: int) -> dict:
     row = db.execute(
         text(
@@ -584,6 +774,7 @@ def rezerviraj_sljedeci_opcina(
     kvaliteta_id: int | None = None,
     kvaliteta_naziv: str | None = None,
     radnik_uloga: str | None = None,
+    exclude_msisdn_id: int | None = None,
 ) -> dict:
     """Rezervira prvi slobodan broj u općini s traženom inherentnom kvalitetom."""
     if kvaliteta_id is not None:
@@ -593,7 +784,7 @@ def rezerviraj_sljedeci_opcina(
     else:
         kval = _resolve_kvaliteta(db, None, radnik_uloga)
 
-    ids = _find_slobodan_ids(db, opcina_naziv, 1, kval.id)
+    ids = _find_slobodan_ids(db, opcina_naziv, 1, kval.id, exclude_msisdn_id=exclude_msisdn_id)
     if not ids:
         _raise_nema_slobodnih(db, opcina_naziv, kval.id)
     return rezerviraj_broj(db, ids[0])
@@ -809,6 +1000,7 @@ def pretrazi_msisdn(
     status: str | None,
     opcina_id: int | None,
     opcina_naziv: str | None,
+    opcina_naziv_tocno: bool,
     uredjaj_id: int | None,
     lokacija_id: int | None,
     korisnik_jmbg: str | None,
@@ -841,6 +1033,7 @@ def pretrazi_msisdn(
         )
         params["opcina_id"] = opcina_id
     elif opcina_naziv and opcina_naziv.strip():
+        naziv = opcina_naziv.strip()
         conditions.append(
             """
             EXISTS (
@@ -853,7 +1046,7 @@ def pretrazi_msisdn(
             )
             """
         )
-        params["opcina_naziv"] = f"%{opcina_naziv.strip()}%"
+        params["opcina_naziv"] = naziv if opcina_naziv_tocno else f"%{naziv}%"
     if uredjaj_id:
         conditions.append(
             """

@@ -224,6 +224,8 @@ export interface KorisnikItem {
   jmbg: string
   email: string | null
   broj_brojeva: number
+  broj_zauzet: number
+  broj_karantena: number
 }
 
 export interface LokacijaHijerarhijaItem {
@@ -261,6 +263,22 @@ export interface DodijeliResponse {
   racun_url: string
   ugovor_url: string
   placanje_status?: string | null
+}
+
+export interface PortalKorisnikInfo {
+  ime: string
+  prezime: string
+  email: string
+}
+
+export interface ProvjeriJmbgResponse {
+  valid: boolean
+  jmbg: string
+  postojeci_brojevi: number
+  prethodno_ime: string | null
+  prethodno_prezime: string | null
+  portal_korisnik: PortalKorisnikInfo | null
+  upozorenja: string[]
 }
 
 export interface DodijeliBulkStavka {

@@ -1,0 +1,50 @@
+naziv_mjesta,opcina_naziv,zupanija_oznaka,tip_jedinice,entitet
+Mostar,Mostar,HNŽ,grad,FBiH
+Stolac,Stolac,HNŽ,grad,FBiH
+Čapljina,Čapljina,HNŽ,opcina,FBiH
+Čitluk,Čitluk,HNŽ,opcina,FBiH
+Crnići,Crnići,HNŽ,opcina,FBiH
+Hodovo,Hodovo,HNŽ,opcina,FBiH
+Ravno,Ravno,HNŽ,opcina,FBiH
+Neum,Neum,HNŽ,opcina,FBiH
+Prozor,Prozor,HNŽ,opcina,FBiH
+Jablanica,Jablanica,HNŽ,opcina,FBiH
+Konjic,Konjic,HNŽ,opcina,FBiH
+Široki Brijeg,Široki Brijeg,ZHŽ,opcina,FBiH
+Ljubuški,Ljubuški,ZHŽ,opcina,FBiH
+Grude,Grude,ZHŽ,opcina,FBiH
+Posušje,Posušje,ZHŽ,opcina,FBiH
+Livno,Livno,HBŽ,grad,FBiH
+Tomislavgrad,Tomislavgrad,HBŽ,opcina,FBiH
+Kupres,Kupres,HBŽ,opcina,FBiH
+Glamoč,Glamoč,HBŽ,opcina,FBiH
+Drvar,Drvar,HBŽ,opcina,FBiH
+Bosansko Grahovo,Bosansko Grahovo,HBŽ,opcina,FBiH
+Sarajevo,Sarajevo,KS,grad,FBiH
+Tuzla,Tuzla,TK,grad,FBiH
+Zenica,Zenica,ZDŽ,grad,FBiH
+Travnik,Travnik,SBŽ,opcina,FBiH
+Vitez,Vitez,SBŽ,opcina,FBiH
+Busovača,Busovača,SBŽ,opcina,FBiH
+Novi Travnik,Novi Travnik,SBŽ,opcina,FBiH
+Kiseljak,Kiseljak,SBŽ,opcina,FBiH
+Kreševo,Kreševo,SBŽ,opcina,FBiH
+Jajce,Jajce,SBŽ,opcina,FBiH
+Bugojno,Bugojno,SBŽ,opcina,FBiH
+Goražde,Goražde,BPŽ,grad,FBiH
+Bihać,Bihać,USŽ,grad,FBiH
+Orašje,Orašje,ŽP,opcina,FBiH
+Odžak,Odžak,ŽP,opcina,FBiH
+Domaljevac,Domaljevac,ŽP,opcina,FBiH
+Brčko,Brčko,BRC,grad,Brčko
+Banja Luka,Banja Luka,RS-BL,grad,RS
+Bijeljina,Bijeljina,RS-BIJ,grad,RS
+Doboj,Doboj,RS-DOB,grad,RS
+Prijedor,Prijedor,RS-PRI,grad,RS
+Trebinje,Trebinje,RS-TRE,grad,RS
+Foča,Foča,RS-FOC,opcina,RS
+Istočno Sarajevo,Istočno Sarajevo,RS-ISA,grad,RS
+Zvornik,Zvornik,RS-ZV,opcina,RS
+Gradiška,Gradiška,RS-GRA,opcina,RS
+Modriča,Modriča,RS-GRA,opcina,RS
+Šamac,Šamac,RS-GRA,opcina,RS

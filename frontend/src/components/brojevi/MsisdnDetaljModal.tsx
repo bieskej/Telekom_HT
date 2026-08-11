@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import type { MsisdnDetalj } from '@/types/api'
-import { Badge } from '@/components/ui/Badge'
+import { MsisdnStatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
@@ -81,13 +81,13 @@ export function MsisdnDetaljModal({
     }
   }
 
-  const istekLabel =
-    detalj?.datum_isteka &&
-    new Date(detalj.datum_isteka).toLocaleDateString('hr-HR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
+  const istekLabel: string | false = detalj?.datum_isteka
+    ? new Date(detalj.datum_isteka).toLocaleDateString('hr-HR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : false
 
   return (
     <>
@@ -102,9 +102,7 @@ export function MsisdnDetaljModal({
         {detalj && !loading && (
           <span className="block space-y-4">
             <span className="flex flex-wrap items-center gap-2">
-              <Badge variant={detalj.status as 'slobodan' | 'zauzet' | 'karantena'}>
-                {formatStatus(detalj.status)}
-              </Badge>
+              <MsisdnStatusBadge status={detalj.status} />
               {detalj.kvaliteta && (
                 <span className="text-sm capitalize text-slate-600">{detalj.kvaliteta}</span>
               )}

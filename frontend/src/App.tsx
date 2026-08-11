@@ -23,6 +23,8 @@ import { PortalPrijavaPage } from '@/pages/portal/PortalPrijavaPage'
 import { PortalRegistracijaPage } from '@/pages/portal/PortalRegistracijaPage'
 import { PortalMojiBrojeviPage } from '@/pages/portal/PortalMojiBrojeviPage'
 import { PortalKontaktPage } from '@/pages/portal/PortalKontaktPage'
+import { HelpPage } from '@/pages/HelpPage'
+import { EvalPripremaPage } from '@/pages/admin/EvalPripremaPage'
 
 export default function App() {
   return (
@@ -60,17 +62,30 @@ export default function App() {
               <Route path="admin/import" element={<ImportPage />} />
               <Route path="admin/email-log" element={<EmailLogPage />} />
               <Route path="admin/audit-log" element={<AuditLogPage />} />
+              <Route path="admin/eval-priprema" element={<EvalPripremaPage />} />
               <Route path="portabilnost" element={<PortabilnostPage />} />
+              <Route path="pomoc" element={<HelpPage />} />
               <Route path="servisni-nalozi" element={<ServisniNaloziPage />} />
+              <Route
+                path="servisni_nalozi"
+                element={<Navigate to="/servisni-nalozi" replace />}
+              />
             </Route>
           </Route>
+          <Route path="/login" element={<Navigate to="/prijava" replace />} />
+          <Route path="/portal/login" element={<Navigate to="/portal/prijava" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster
           position="top-right"
           richColors
           toastOptions={{
-            classNames: { toast: 'rounded-xl shadow-lg border border-slate-100' },
+            classNames: {
+              toast:
+                'rounded-xl shadow-lg border border-slate-200 bg-white text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100',
+              title: 'text-slate-900 dark:text-slate-100',
+              description: 'text-slate-600 dark:text-slate-400',
+            },
           }}
         />
       </AuthProvider>

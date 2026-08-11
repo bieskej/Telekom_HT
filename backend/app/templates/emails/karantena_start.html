@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Broj u karanteni — HT Eronet{% endblock %}
+{% block subtitle %}Obavijest o karanteni{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;">Poštovani/poštovana{% if ime %} <strong>{{ ime }} {{ prezime }}</strong>{% endif %},</p>
+<p style="margin:0 0 20px;">broj <strong style="color:#0054A6;">{{ broj_formatiran }}</strong> stavljen je u <strong>karantenu</strong> i privremeno nije dostupan za dodjelu.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff7ed;border-radius:8px;border:1px solid #fed7aa;">
+  <tr><td style="padding:14px 16px;"><strong>Datum isteka karantene:</strong> {{ datum_isteka }}</td></tr>
+  <tr><td style="padding:0 16px 14px;color:#64748b;font-size:14px;">Trajanje: {{ karantena_dana }} dana</td></tr>
+</table>
+{% endblock %}

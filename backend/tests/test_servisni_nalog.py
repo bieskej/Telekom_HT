@@ -21,6 +21,38 @@ def _uredjaj_s_msisdn(db):
     ).fetchone()
 
 
+def test_post_servisni_nalog_neispravan_uredjaj(client: TestClient, admin_token: str):
+    res = client.post(
+        "/servisni-nalozi",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"uredjaj_id": 999999999, "opis": "Test", "prioritet": "srednji"},
+    )
+    assert res.status_code == 400, res.text
+    assert "ne postoji" in res.json()["detail"].lower() or "uređaj" in res.json()["detail"].lower()
+
+
+def test_post_servisni_nalog_uspjeh(client: TestClient, db, admin_token: str):
+    row = _uredjaj_s_msisdn(db)
+    if not row:
+        return
+    res = client.post(
+        "/servisni-nalozi",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "uredjaj_id": row.uredjaj_id,
+            "opis": "Test običan nalog",
+            "prioritet": "srednji",
+        },
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["uredjaj_id"] == row.uredjaj_id
+    assert body["opis"] == "Test običan nalog"
+    assert body["status"] == "otvoren"
+    assert body["prioritet"] == "srednji"
+    assert body["id"] > 0
+
+
 def test_kriticni_nalog_blokira_msisdne_uredjaja(client: TestClient, db, admin_token: str):
     row = _uredjaj_s_msisdn(db)
     if not row:

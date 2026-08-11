@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import ServisniNalog
@@ -40,6 +41,18 @@ def _osvjezi_u_kvaru_uredjaja(db: Session, uredjaj_id: int) -> None:
     )
 
 
+def _provjeri_uredjaj_postoji(db: Session, uredjaj_id: int) -> None:
+    row = db.execute(
+        text("SELECT 1 FROM uredjaji WHERE id = :id"),
+        {"id": uredjaj_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Uređaj s ID {uredjaj_id} ne postoji u sustavu.",
+        )
+
+
 def lista_naloga(db: Session) -> list[dict]:
     rows = db.execute(
         text(
@@ -57,31 +70,53 @@ def lista_naloga(db: Session) -> list[dict]:
 
 
 def kreiraj_nalog(db: Session, data: dict, radnik_id: int) -> dict:
+    uredjaj_id = data.get("uredjaj_id")
+    if not uredjaj_id or int(uredjaj_id) <= 0:
+        raise HTTPException(status_code=400, detail="Uređaj je obavezan.")
+    uredjaj_id = int(uredjaj_id)
+    opis = (data.get("opis") or "").strip()
+    if not opis:
+        raise HTTPException(status_code=400, detail="Opis naloga je obavezan.")
     prioritet = data.get("prioritet", "srednji")
     if prioritet not in VALID_PRIORITET:
         raise HTTPException(status_code=400, detail="Neispravan prioritet.")
+    _provjeri_uredjaj_postoji(db, uredjaj_id)
     n = ServisniNalog(
-        uredjaj_id=data["uredjaj_id"],
-        opis=data["opis"],
+        uredjaj_id=uredjaj_id,
+        opis=opis,
         status="otvoren",
         prioritet=prioritet,
         prijavio_id=radnik_id,
     )
-    db.add(n)
-    db.flush()
+    try:
+        db.add(n)
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Uređaj ili radnik nije valjan (provjeri ID uređaja).",
+        ) from exc
     if n.status == "otvoren" and n.prioritet == "kritican":
         _osvjezi_u_kvaru_uredjaja(db, n.uredjaj_id)
-    from app.services.audit_service import zapis_audit
+    try:
+        from app.services.audit_service import zapis_audit
 
-    zapis_audit(
-        db,
-        akcija="servisni_nalog_otvoren",
-        entitet="servisni_nalog",
-        entitet_id=n.id,
-        radnik_id=radnik_id,
-        detalji={"uredjaj_id": n.uredjaj_id, "prioritet": n.prioritet},
-    )
-    db.commit()
+        zapis_audit(
+            db,
+            akcija="servisni_nalog_otvoren",
+            entitet="servisni_nalog",
+            entitet_id=n.id,
+            radnik_id=radnik_id,
+            detalji={"uredjaj_id": n.uredjaj_id, "prioritet": n.prioritet},
+        )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Spremanje naloga nije uspjelo (provjeri uređaj i migracije).",
+        ) from exc
     db.refresh(n)
     return _row_dict(n)
 

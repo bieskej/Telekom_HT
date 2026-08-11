@@ -18,9 +18,12 @@ from app.schemas import (
     MsisdnPretragaResponse,
     OslobodiRequest,
     OslobodiResponse,
+    ProvjeriJmbgResponse,
     RezervirajResponse,
     RezervirajSljedeciRequest,
     StatistikeResponse,
+    VratiAktivnoRequest,
+    VratiAktivnoResponse,
     WildcardPretragaResponse,
 )
 from app.services import msisdn_service
@@ -67,6 +70,17 @@ async def dodijeli_broj(
     )
     db.commit()
     return DodijeliBrojResponse(**result)
+
+
+@router.get("/msisdn/provjeri-jmbg", response_model=ProvjeriJmbgResponse)
+async def provjeri_jmbg_dodjela_endpoint(
+    _radnik: RequireProdajaIliAdmin,
+    jmbg: str = Query(..., min_length=1),
+    ime: str | None = None,
+    prezime: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return ProvjeriJmbgResponse(**msisdn_service.provjeri_jmbg_dodjela(db, jmbg, ime, prezime))
 
 
 @router.post("/oslobodi/{msisdn_id}", response_model=OslobodiResponse)
@@ -137,6 +151,31 @@ async def oslobodi_iz_karantene(
     return MsisdnOslobodiKarantenaResponse(**result)
 
 
+@router.post("/msisdn/{msisdn_id}/vrati-aktivno", response_model=VratiAktivnoResponse)
+async def vrati_iz_karantene_u_aktivno(
+    msisdn_id: int,
+    radnik: RequireProdajaIliAdmin,
+    request: Request,
+    payload: VratiAktivnoRequest | None = None,
+    db: Session = Depends(get_db),
+):
+    razlog = payload.razlog if payload else None
+    result = msisdn_service.vrati_iz_karantene_u_aktivno(db, msisdn_id, razlog, radnik.id)
+    from app.services.audit_service import zapis_audit
+
+    zapis_audit(
+        db,
+        akcija="vraceno_u_aktivno",
+        entitet="msisdn",
+        entitet_id=msisdn_id,
+        radnik_id=radnik.id,
+        detalji={"razlog": razlog},
+        request=request,
+    )
+    db.commit()
+    return VratiAktivnoResponse(**result)
+
+
 @router.get("/msisdn/pretraga", response_model=MsisdnPretragaResponse)
 async def pretraga_msisdn(
     _radnik: RequirePregled,
@@ -144,6 +183,7 @@ async def pretraga_msisdn(
     status: str | None = None,
     opcina_id: int | None = None,
     opcina_naziv: str | None = None,
+    opcina_naziv_tocno: bool = False,
     uredjaj_id: int | None = None,
     lokacija_id: int | None = None,
     korisnik_jmbg: str | None = None,
@@ -159,6 +199,7 @@ async def pretraga_msisdn(
         status,
         opcina_id,
         opcina_naziv,
+        opcina_naziv_tocno,
         uredjaj_id,
         lokacija_id,
         korisnik_jmbg,
@@ -191,6 +232,7 @@ async def rezerviraj_sljedeci(
         body.kvaliteta_id,
         body.kvaliteta_naziv,
         radnik.uloga,
+        exclude_msisdn_id=body.exclude_msisdn_id,
     )
     return RezervirajResponse(**result)
 

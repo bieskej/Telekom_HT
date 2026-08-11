@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Upozorenje iskorištenosti — HT Eronet{% endblock %}
+{% block subtitle %}Admin obavijest{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;">Sljedeće općine prelaze prag iskorištenosti od <strong>{{ prag }}%</strong>:</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;">
+  <tr style="background:#0054A6;color:#fff;">
+    <th style="padding:10px 12px;text-align:left;">Općina</th>
+    <th style="padding:10px 12px;text-align:right;">Zauzetost</th>
+    <th style="padding:10px 12px;text-align:right;">Slobodni</th>
+    <th style="padding:10px 12px;text-align:right;">Ukupno</th>
+  </tr>
+  {% for o in top_opcine %}
+  <tr style="background:{% if loop.index is odd %}#f8fafc{% else %}#ffffff{% endif %};">
+    <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">{{ o.naziv }}</td>
+    <td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;">{{ o.postotak }}%</td>
+    <td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;">{{ o.slobodni }}</td>
+    <td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;">{{ o.ukupno }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

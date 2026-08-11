@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Karantena istekla — HT Eronet{% endblock %}
+{% block subtitle %}Broj ponovno slobodan{% endblock %}
+{% block content %}
+<p style="margin:0 0 16px;">Poštovani/poštovana{% if ime %} <strong>{{ ime }} {{ prezime }}</strong>{% endif %},</p>
+<p style="margin:0 0 20px;">karantena za broj <strong style="color:#0054A6;">{{ broj_formatiran }}</strong> je istekla.</p>
+<p style="margin:0;padding:14px 16px;background:#ecfdf5;border-radius:8px;border:1px solid #a7f3d0;color:#047857;">
+  Broj je sada ponovno <strong>slobodan</strong> za dodjelu u sustavu HT Eronet.
+</p>
+{% endblock %}

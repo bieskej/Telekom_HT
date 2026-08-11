@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, FileSpreadsheet, FileText, Printer } from 'lucide-react'
-import { api } from '@/lib/api'
+import { api, mapApiError } from '@/lib/api'
 import type { Statistike } from '@/types/api'
 import { OpcinaChart } from '@/components/dashboard/OpcinaChart'
 import { OpcinaMap } from '@/components/dashboard/OpcinaMap'
@@ -39,7 +39,7 @@ export function DashboardPage() {
           )
         }
       })
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Greška'))
+      .catch((e) => toast.error(mapApiError(e, 'Statistike nisu učitane.')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -51,7 +51,7 @@ export function DashboardPage() {
       preuzmiBlob(blob, tip === 'excel' ? 'statistike.xlsx' : 'statistike.pdf')
       toast.success('Izvoz je preuzet')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Izvoz nije uspio')
+      toast.error(mapApiError(e, 'Izvoz nije uspio.'))
     } finally {
       setExporting(null)
     }
@@ -60,7 +60,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-slate-600 animate-fade-in">
+        <p className="text-slate-600 dark:text-slate-400 animate-fade-in">
           Pregled stanja brojeva HT Eronet sustava za dodjelu.
         </p>
         <div className="flex flex-wrap gap-2">

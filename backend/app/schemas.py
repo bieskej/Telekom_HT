@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class PrijavaRequest(BaseModel):
@@ -122,6 +122,13 @@ class DodijeliBrojRequest(BaseModel):
     kvaliteta_id: int | None = None
     placanje: PlacanjePodaciRequest = Field(default_factory=PlacanjePodaciRequest)
 
+    @field_validator("jmbg", mode="before")
+    @classmethod
+    def normaliziraj_jmbg_unos(cls, v: str) -> str:
+        from app.services.jmbg import normaliziraj_jmbg
+
+        return normaliziraj_jmbg(str(v))
+
 
 class DodijeliBrojResponse(BaseModel):
     msisdn_id: int
@@ -134,6 +141,22 @@ class DodijeliBrojResponse(BaseModel):
     racun_url: str
     ugovor_url: str
     placanje_status: str | None = None
+
+
+class PortalKorisnikInfo(BaseModel):
+    ime: str
+    prezime: str
+    email: str
+
+
+class ProvjeriJmbgResponse(BaseModel):
+    valid: bool
+    jmbg: str
+    postojeci_brojevi: int = 0
+    prethodno_ime: str | None = None
+    prethodno_prezime: str | None = None
+    portal_korisnik: PortalKorisnikInfo | None = None
+    upozorenja: list[str] = Field(default_factory=list)
 
 
 class OslobodiRequest(BaseModel):
@@ -166,6 +189,16 @@ class MsisdnOslobodiKarantenaRequest(BaseModel):
 
 
 class MsisdnOslobodiKarantenaResponse(BaseModel):
+    poruka: str
+    msisdn_id: int
+    status: str
+
+
+class VratiAktivnoRequest(BaseModel):
+    razlog: str | None = Field(None, max_length=255)
+
+
+class VratiAktivnoResponse(BaseModel):
     poruka: str
     msisdn_id: int
     status: str
@@ -296,6 +329,7 @@ class RezervirajSljedeciRequest(BaseModel):
         default=None,
         pattern="^(silver|gold|platinum|diamond)$",
     )
+    exclude_msisdn_id: int | None = None
 
 
 class RezervirajResponse(BaseModel):
@@ -399,12 +433,21 @@ class StatistikeResponse(BaseModel):
     po_sjedistima: list[SjedisteStatistika] = Field(default_factory=list)
 
 
+class IskoristivostProvjeriResponse(BaseModel):
+    poslano_opcina: int
+    prag: float
+    opce: list[OpcinaStatistika]
+    smtp_konfiguriran: bool
+
+
 class KorisnikItem(BaseModel):
     ime: str
     prezime: str
     jmbg: str
     email: str | None = None
     broj_brojeva: int
+    broj_zauzet: int = 0
+    broj_karantena: int = 0
 
 
 class LokacijaHijerarhijaItem(BaseModel):

@@ -4,7 +4,8 @@ import { Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import type { WildcardMsisdnItem } from '@/types/api'
-import { Badge } from '@/components/ui/Badge'
+import { Badge, MsisdnStatusBadge } from '@/components/ui/Badge'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 
@@ -12,18 +13,19 @@ const PRESETI = ['*7777', '*1234', '*0000', '*X0X0', '*XX'] as const
 
 export function MagicBrojPretraga() {
   const navigate = useNavigate()
-  const [uzorak, setUzorak] = useState('*7777')
+  const [uzorak, setUzorak] = useState('')
   const [rezultati, setRezultati] = useState<WildcardMsisdnItem[]>([])
   const [loading, setLoading] = useState(false)
 
   const trazi = useCallback(async (pattern: string) => {
-    if (!pattern.trim()) {
+    const trimmed = pattern.trim()
+    if (!trimmed) {
       setRezultati([])
       return
     }
     setLoading(true)
     try {
-      const res = await api.wildcardPretraga({ uzorak: pattern, limit: 50 })
+      const res = await api.wildcardPretraga({ uzorak: trimmed, limit: 50 })
       setRezultati(res.rezultati)
     } catch (e) {
       setRezultati([])
@@ -34,7 +36,12 @@ export function MagicBrojPretraga() {
   }, [])
 
   useEffect(() => {
-    const t = window.setTimeout(() => void trazi(uzorak), 300)
+    const trimmed = uzorak.trim()
+    if (!trimmed) {
+      setRezultati([])
+      return
+    }
+    const t = window.setTimeout(() => void trazi(trimmed), 300)
     return () => window.clearTimeout(t)
   }, [uzorak, trazi])
 
@@ -78,7 +85,8 @@ export function MagicBrojPretraga() {
             >
               <p className="font-mono text-lg font-semibold text-[#0054A6]">{r.broj_formatiran}</p>
               <span className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <Badge variant={r.kvaliteta as 'slobodan' | 'zauzet' | 'karantena'}>
+                <MsisdnStatusBadge status="slobodan" />
+                <Badge variant="default" className="capitalize">
                   {r.kvaliteta}
                 </Badge>
                 <span className="text-sm font-medium text-slate-700">
@@ -92,8 +100,12 @@ export function MagicBrojPretraga() {
           ))}
         </span>
       )}
-      {!loading && uzorak && rezultati.length === 0 && (
-        <p className="mt-4 text-sm text-slate-500">Nema slobodnih brojeva za taj uzorak.</p>
+      {!loading && uzorak.trim() && rezultati.length === 0 && (
+        <EmptyState
+          title="Nema slobodnih brojeva"
+          description="Pokušajte drugi uzorak ili jedan od predložaka."
+          className="mt-4 border-0 bg-transparent shadow-none"
+        />
       )}
     </Card>
   )
